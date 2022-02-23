@@ -1,0 +1,87 @@
+/*{
+    "author": "kangqingyu",
+    "targets": ["omnifocus"],
+    "type": "action",
+    "identifier": "com.kangqingyu.www",
+    "version": "0.1",
+    "description": "curve desc iCloud",
+    "label": "curveMemOmni show in bar",
+    "mediumLabel": "curveMemNewMedium",
+    "paletteLabel": "curveMemNewPalette",
+}*/
+(() => {
+    var action = new PlugIn.Action(function(selection, sender) {
+        // action code
+        // selection options: tasks, projects, folders, tags
+        var duplicatedTasks = new Array()
+        selection.tasks.forEach(function(task) {
+        	// curve是我复习的项目名，根据自己的命名修改，此项目为一级文件夹的子项目
+        	var project = flattenedProjects.byName("curve")
+        	// var targetProject = projectNamed("curve") 适用于项目在一级目录
+
+            insertionLocation = project
+            if (insertionLocation === null) { 
+                insertionLocation = inbox.ending
+            }
+
+            var now = new Date()
+            var today = Calendar.current.startOfDay(now)
+            var dc = new DateComponents
+            // 每天早上6：30开始，实时自己定
+            dc.hour = 6
+            dc.minute = 30
+            dc.second = 0
+            var reviewArray = [1, 
+            				   1 + 2, 
+            				   1 + 2 + 4, 
+            				   1 + 2 + 4 + 7, 
+            				   1 + 2 + 4 + 7 + 15, 
+            				   1 + 2 + 4 + 7 + 15 + 30]
+            for (var i = 0; i < reviewArray.length; ++i) {
+                dc.day = reviewArray[i]
+                var dateObj = Calendar.current.dateByAddingDateComponents(today, dc)
+                console.log(dc)
+                // copy task
+                dupTasks = duplicateTasks([task], insertionLocation)
+                dupTask = dupTasks[0]
+                duplicatedTasks.push(dupTask.id.primaryKey)
+
+                // 重命名
+                var tailName = reviewArray[i]
+                if (i > 0) {
+                    tailName = reviewArray[i] - reviewArray[i-1]
+                }
+                var reName = task.name + '_' + tailName.toString()
+                console.log(task.name)
+                dupTask.name = reName
+                console.log(reName)
+
+                /* 修改Task的tag
+                var tag = tagNamed("tagTest")
+                dupTask.addTag(tag)*/
+                dupTask.clearTags()
+                
+                // 修改deferDate       
+                dupTask.deferDate = dateObj 
+                // due截止日期要清空
+                dupTask.dueDate = null
+                // 移动到项目
+                moveTasks([dupTask], insertionLocation)
+            }
+            // 被复制的任务，标记完成
+            task.markComplete()
+
+        })
+        // 切换到粘贴到的目标项目
+        idStr = duplicatedTasks.join(",")
+        URL.fromString("omnifocus:///task/" + idStr).open()
+    });
+
+    action.validate = function(selection, sender){
+        // validation code
+        // selection options: tasks, projects, folders, tags
+        return (selection.tasks.length > 0)
+    };
+    
+    return action;
+})();
